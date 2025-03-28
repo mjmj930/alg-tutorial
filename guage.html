@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络速度指针仪表盘</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #0a0e17;
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .dashboard {
+            width: 90%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .gauge-panel {
+            background: linear-gradient(145deg, rgba(16, 22, 40, 0.8), rgba(8, 12, 25, 0.9));
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 180, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .gauge-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00b4ff, transparent);
+            animation: scanline 3s linear infinite;
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .panel-title {
+            font-size: 24px;
+            font-weight: 300;
+            color: #00f2fe;
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
+            letter-spacing: 1px;
+        }
+        
+        .panel-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0, 180, 255, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid rgba(0, 180, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 180, 255, 0.2);
+        }
+        
+        .panel-icon i {
+            font-size: 24px;
+            color: #00b4ff;
+        }
+        
+        .gauge-container {
+            width: 100%;
+            height: 250px;
+            position: relative;
+            margin: 20px 0;
+        }
+        
+        .gauge {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .gauge-body {
+            width: 100%;
+            height: 0;
+            padding-bottom: 50%;
+            position: relative;
+            border-top-left-radius: 100% 200%;
+            border-top-right-radius: 100% 200%;
+            overflow: hidden;
+            background: #0d1424;
+            border: 2px solid rgba(0, 180, 255, 0.3);
+        }
+        
+        .gauge-fill {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #00b4ff, #00f2fe);
+            transform-origin: center top;
+            transform: rotate(0.5turn);
+            transition: transform 1s ease-out;
+        }
+        
+        .gauge-cover {
+            width: 75%;
+            height: 150%;
+            background: #0a0e17;
+            border-radius: 50%;
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5) inset;
+        }
+        
+        .speed-value {
+            font-size: 48px;
+            font-weight: 300;
+            line-height: 1;
+        }
+        
+        .speed-unit {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 5px;
+        }
+        
+        .gauge-marks {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+        
+        .gauge-mark {
+            position: absolute;
+            width: 2px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.5);
+            left: 50%;
+            transform-origin: bottom center;
+        }
+        
+        .gauge-mark-label {
+            position: absolute;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            transform: translateX(-50%);
+        }
+        
+        .gauge-pointer {
+            position: absolute;
+            width: 4px;
+            height: 40%;
+            background: #ff4757;
+            left: 50%;
+            bottom: 50%;
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(0.5turn);
+            z-index: 10;
+            transition: transform 1s ease-out;
+            box-shadow: 0 0 10px rgba(255, 71, 87, 0.7);
+        }
+        
+        .gauge-pointer::before {
+            content: '';
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: #ff4757;
+            border-radius: 50%;
+            bottom: -7px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 10px rgba(255, 71, 87, 0.7);
+        }
+        
+        .speed-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+        
+        .info-item {
+            text-align: center;
+        }
+        
+        .info-value {
+            font-size: 18px;
+            color: #fff;
+            margin-top: 5px;
+        }
+        
+        .network-status {
+            grid-column: span 2;
+            background: linear-gradient(145deg, rgba(16, 22, 40, 0.8), rgba(8, 12, 25, 0.9));
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 180, 255, 0.2);
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-title {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            font-size: 18px;
+            color: #00f2fe;
+        }
+        
+        .grid-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.05;
+            background-image: 
+                linear-gradient(rgba(0, 180, 255, 0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 180, 255, 0.3) 1px, transparent 1px);
+            background-size: 20px 20px;
+            z-index: 1;
+        }
+        
+        .corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-color: #00b4ff;
+            border-style: solid;
+            border-width: 0;
+        }
+        
+        .corner-tl {
+            top: 10px;
+            left: 10px;
+            border-top-width: 2px;
+            border-left-width: 2px;
+        }
+        
+        .corner-tr {
+            top: 10px;
+            right: 10px;
+            border-top-width: 2px;
+            border-right-width: 2px;
+        }
+        
+        .corner-bl {
+            bottom: 10px;
+            left: 10px;
+            border-bottom-width: 2px;
+            border-left-width: 2px;
+        }
+        
+        .corner-br {
+            bottom: 10px;
+            right: 10px;
+            border-bottom-width: 2px;
+            border-right-width: 2px;
+        }
+        
+        @keyframes scanline {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+                padding: 20px 0;
+            }
+            
+            .network-status {
+                grid-column: span 1;
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .panel-title {
+                font-size: 20px;
+            }
+            
+            .speed-value {
+                font-size: 36px;
+            }
+            
+            .gauge-container {
+                height: 200px;
+            }
+        }
+    </style>
+    <!-- 使用Font Awesome图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- 下载速度仪表盘 -->
+        <div class="gauge-panel">
+            <div class="grid-bg"></div>
+            <div class="corner corner-tl"></div>
+            <div class="corner corner-tr"></div>
+            <div class="corner corner-bl"></div>
+            <div class="corner corner-br"></div>
+            
+            <div class="panel-header">
+                <h2 class="panel-title">下载速度</h2>
+                <div class="panel-icon">
+                    <i class="fas fa-download"></i>
+                </div>
+            </div>
+            
+            <div class="gauge-container">
+                <div class="gauge">
+                    <div class="gauge-body">
+                        <div class="gauge-fill" id="download-fill"></div>
+                        <div class="gauge-pointer" id="download-pointer"></div>
+                    </div>
+                    <div class="gauge-cover">
+                        <div class="speed-value" id="download-value">0</div>
+                        <div class="speed-unit">Mbps</div>
+                    </div>
+                    <div class="gauge-marks" id="download-marks"></div>
+                </div>
+            </div>
+            
+            <div class="speed-info">
+                <div class="info-item">
+                    <div>峰值</div>
+                    <div class="info-value" id="download-peak">0 Mbps</div>
+                </div>
+                <div class="info-item">
+                    <div>平均</div>
+                    <div class="info-value" id="download-avg">0 Mbps</div>
+                </div>
+                <div class="info-item">
+                    <div>延迟</div>
+                    <div class="info-value" id="download-latency">0 ms</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 上传速度仪表盘 -->
+        <div class="gauge-panel">
+            <div class="grid-bg"></div>
+            <div class="corner corner-tl"></div>
+            <div class="corner corner-tr"></div>
+            <div class="corner corner-bl"></div>
+            <div class="corner corner-br"></div>
+            
+            <div class="panel-header">
+                <h2 class="panel-title">上传速度</h2>
+                <div class="panel-icon">
+                    <i class="fas fa-upload"></i>
+                </div>
+            </div>
+            
+            <div class="gauge-container">
+                <div class="gauge">
+                    <div class="gauge-body">
+                        <div class="gauge-fill" id="upload-fill"></div>
+                        <div class="gauge-pointer" id="upload-pointer"></div>
+                    </div>
+                    <div class="gauge-cover">
+                        <div class="speed-value" id="upload-value">0</div>
+                        <div class="speed-unit">Mbps</div>
+                    </div>
+                    <div class="gauge-marks" id="upload-marks"></div>
+                </div>
+            </div>
+            
+            <div class="speed-info">
+                <div class="info-item">
+                    <div>峰值</div>
+                    <div class="info-value" id="upload-peak">0 Mbps</div>
+                </div>
+                <div class="info-item">
+                    <div>平均</div>
+                    <div class="info-value" id="upload-avg">0 Mbps</div>
+                </div>
+                <div class="info-item">
+                    <div>波动</div>
+                    <div class="info-value" id="upload-jitter">0 ms</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 网络状态面板 -->
+        <div class="network-status">
+            <div class="status-item">
+                <div class="status-title">IP地址</div>
+                <div class="status-value" id="ip-address">192.168.1.100</div>
+            </div>
+            <div class="status-item">
+                <div class="status-title">连接类型</div>
+                <div class="status-value" id="connection-type">5G</div>
+            </div>
+            <div class="status-item">
+                <div class="status-title">信号强度</div>
+                <div class="status-value" id="signal-strength">-75 dBm</div>
+            </div>
+            <div class="status-item">
+                <div class="status-title">数据用量</div>
+                <div class="status-value" id="data-usage">3.2/10 GB</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化仪表盘刻度
+        function initGaugeMarks(gaugeId, maxValue) {
+            const gaugeMarks = document.getElementById(gaugeId);
+            const markCount = 10;
+            const markAngleStep = 180 / (markCount - 1);
+            
+            for (let i = 0; i < markCount; i++) {
+                const angle = i * markAngleStep;
+                const mark = document.createElement('div');
+                mark.className = 'gauge-mark';
+                mark.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+                
+                // 长刻度
+                if (i % 2 === 0) {
+                    mark.style.height = '15px';
+                    
+                    const label = document.createElement('div');
+                    label.className = 'gauge-mark-label';
+                    label.textContent = Math.round((i / (markCount - 1)) * maxValue);
+                    label.style.bottom = '20px';
+                    label.style.transform = `translateX(-50%) rotate(${-angle}deg)`;
+                    
+                    const labelContainer = document.createElement('div');
+                    labelContainer.style.position = 'absolute';
+                    labelContainer.style.bottom = '0';
+                    labelContainer.style.left = '50%';
+                    labelContainer.style.transformOrigin = 'bottom center';
+                    labelContainer.style.transform = `rotate(${angle}deg)`;
+                    labelContainer.appendChild(label);
+                    
+                    gaugeMarks.appendChild(labelContainer);
+                }
+                
+                gaugeMarks.appendChild(mark);
+            }
+        }
+        
+        // 初始化两个仪表盘
+        initGaugeMarks('download-marks', 200);
+        initGaugeMarks('upload-marks', 100);
+        
+        // 更新仪表盘指针和填充
+        function updateGauge(gaugeId, value, maxValue) {
+            const percentage = Math.min(value / maxValue, 1);
+            const angle = percentage * 180;
+            
+            document.getElementById(`${gaugeId}-pointer`).style.transform = 
+                `translateX(-50%) rotate(${angle}deg)`;
+                
+            document.getElementById(`${gaugeId}-fill`).style.transform = 
+                `rotate(${angle / 180}turn)`;
+                
+            document.getElementById(`${gaugeId}-value`).textContent = value.toFixed(1);
+        }
+        
+        // 模拟实时数据
+        let downloadSpeed = 0;
+        let uploadSpeed = 0;
+        let downloadPeak = 0;
+        let uploadPeak = 0;
+        let downloadSum = 0;
+        let uploadSum = 0;
+        let dataCount = 0;
+        
+        function updateData() {
+            // 生成随机数据 (模拟真实网络波动)
+            downloadSpeed = Math.max(0, 
+                downloadSpeed + (Math.random() - 0.45) * 40
+            );
+            
+            uploadSpeed = Math.max(0, 
+                uploadSpeed + (Math.random() - 0.5) * 20
+            );
+            
+            // 限制最大值
+            downloadSpeed = Math.min(downloadSpeed, 220);
+            uploadSpeed = Math.min(uploadSpeed, 110);
+            
+            // 更新峰值和平均值
+            downloadPeak = Math.max(downloadPeak, downloadSpeed);
+            uploadPeak = Math.max(uploadPeak, uploadSpeed);
+            
+            downloadSum += downloadSpeed;
+            uploadSum += uploadSpeed;
+            dataCount++;
+            
+            const downloadAvg = (downloadSum / dataCount).toFixed(1);
+            const uploadAvg = (uploadSum / dataCount).toFixed(1);
+            
+            // 更新仪表盘
+            updateGauge('download', downloadSpeed, 200);
+            updateGauge('upload', uploadSpeed, 100);
+            
+            // 更新统计信息
+            document.getElementById('download-peak').textContent = downloadPeak.toFixed(1) + ' Mbps';
+            document.getElementById('upload-peak').textContent = uploadPeak.toFixed(1) + ' Mbps';
+            
+            document.getElementById('download-avg').textContent = downloadAvg + ' Mbps';
+            document.getElementById('upload-avg').textContent = uploadAvg + ' Mbps';
+            
+            document.getElementById('download-latency').textContent = 
+                Math.max(1, Math.floor(50 - downloadSpeed / 6 + Math.random() * 10)) + ' ms';
+            
+            document.getElementById('upload-jitter').textContent = 
+                Math.floor(1 + Math.random() * 5) + ' ms';
+        }
+        
+        // 初始数据填充
+        for (let i = 0; i < 10; i++) {
+            setTimeout(updateData, i * 300);
+        }
+        
+        // 定时更新数据
+        setInterval(updateData, 1000);
+        
+        // 模拟IP地址和网络信息
+        function simulateNetworkInfo() {
+            const types = ['5G', '4G LTE', 'Wi-Fi 6', '光纤'];
+            const strengths = ['优秀', '良好', '一般', '差'];
+            const strengthValues = ['-65 dBm', '-75 dBm', '-85 dBm', '-95 dBm'];
+            
+            document.getElementById('connection-type').textContent = 
+                types[Math.floor(Math.random() * types.length)];
+                
+            const strengthIndex = Math.floor(Math.random() * strengths.length);
+            document.getElementById('signal-strength').textContent = strengthValues[strengthIndex];
+            
+            // 更新数据用量
+            const used = (3.2 + Math.random() * 0.2).toFixed(1);
+            document.getElementById('data-usage').textContent = `${used}/10 GB`;
+        }
+        
+        simulateNetworkInfo();
+        setInterval(simulateNetworkInfo, 10000);
+    </script>
+</body>
+</html>

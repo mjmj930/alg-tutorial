@@ -1,11 +1,9 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include <map>
 
 using namespace std;
 
-// 时间单位对应的秒数，1 month 取30天，1 year 取365天
 const long long SECOND = 1;
 const long long MINUTE = 60 * SECOND;
 const long long HOUR = 60 * MINUTE;
@@ -20,7 +18,7 @@ long long unitToSeconds(const string& unit) {
     if (unit == "day" || unit == "days") return DAY;
     if (unit == "month" || unit == "months") return MONTH;
     if (unit == "year" || unit == "years") return YEAR;
-    return -1; // 不支持的单位
+    return -1;
 }
 
 string formatDuration(long long totalSeconds) {
@@ -53,26 +51,31 @@ string formatDuration(long long totalSeconds) {
     return result;
 }
 
-int main() {
-    string line;
-    cout << "input duartion:";
-    getline(cin, line);
-
-    istringstream iss(line);
+// 关键函数：输入原始字符串，输出格式化字符串
+string convertDuration(const string& input) {
+    istringstream iss(input);
     long long value;
     string unit;
-    iss >> value >> unit;
+    if (!(iss >> value >> unit)) {
+        return "input error";
+    }
 
     long long baseSeconds = unitToSeconds(unit);
     if (baseSeconds < 0) {
-        cout << "unsupport unit" << endl;
-        return 1;
+        return "unsupported unit";
     }
 
     long long totalSeconds = value * baseSeconds;
+    return formatDuration(totalSeconds);
+}
 
-    string output = formatDuration(totalSeconds);
-    cout << output << endl;
+int main() {
+    string line;
+    cout << "input duration: ";
+    getline(cin, line);
+
+    string result = convertDuration(line);
+    cout << result << endl;
 
     return 0;
 }

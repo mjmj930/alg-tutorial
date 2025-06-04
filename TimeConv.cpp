@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <vector>
 
 using namespace std;
 
@@ -22,36 +23,41 @@ long long unitToSeconds(const string& unit) {
 }
 
 string formatDuration(long long totalSeconds) {
-    string result;
+    vector<string> parts;
 
     long long years = totalSeconds / YEAR;
     totalSeconds %= YEAR;
+    if (years > 0) parts.push_back(to_string(years) + "year");
 
     long long months = totalSeconds / MONTH;
     totalSeconds %= MONTH;
+    if (months > 0) parts.push_back(to_string(months) + "month");
 
     long long days = totalSeconds / DAY;
     totalSeconds %= DAY;
+    if (days > 0) parts.push_back(to_string(days) + "day");
 
     long long hours = totalSeconds / HOUR;
     totalSeconds %= HOUR;
+    if (hours > 0) parts.push_back(to_string(hours) + "hour");
 
     long long minutes = totalSeconds / MINUTE;
     totalSeconds %= MINUTE;
+    if (minutes > 0) parts.push_back(to_string(minutes) + "minute");
 
     long long seconds = totalSeconds;
+    if (seconds > 0 || parts.empty()) parts.push_back(to_string(seconds) + "second");
 
-    if (years > 0) result += to_string(years) + "year";
-    if (months > 0) result += to_string(months) + "month";
-    if (days > 0) result += to_string(days) + "day";
-    if (hours > 0) result += to_string(hours) + "hour";
-    if (minutes > 0) result += to_string(minutes) + "minute";
-    if (seconds > 0 || result.empty()) result += to_string(seconds) + "second";
+    // 拼接时添加空格（不含首尾空格）
+    stringstream result;
+    for (size_t i = 0; i < parts.size(); ++i) {
+        if (i > 0) result << " ";
+        result << parts[i];
+    }
 
-    return result;
+    return result.str();
 }
 
-// 关键函数：输入原始字符串，输出格式化字符串
 string convertDuration(const string& input) {
     istringstream iss(input);
     long long value;

@@ -27,28 +27,28 @@ string formatDuration(long long totalSeconds) {
 
     long long years = totalSeconds / YEAR;
     totalSeconds %= YEAR;
-    if (years > 0) parts.push_back(to_string(years) + "year");
+    if (years > 0) parts.push_back(to_string(years) + " year");
 
     long long months = totalSeconds / MONTH;
     totalSeconds %= MONTH;
-    if (months > 0) parts.push_back(to_string(months) + "month");
+    if (months > 0) parts.push_back(to_string(months) + " month");
 
     long long days = totalSeconds / DAY;
     totalSeconds %= DAY;
-    if (days > 0) parts.push_back(to_string(days) + "day");
+    if (days > 0) parts.push_back(to_string(days) + " day");
 
     long long hours = totalSeconds / HOUR;
     totalSeconds %= HOUR;
-    if (hours > 0) parts.push_back(to_string(hours) + "hour");
+    if (hours > 0) parts.push_back(to_string(hours) + " hour");
 
     long long minutes = totalSeconds / MINUTE;
     totalSeconds %= MINUTE;
-    if (minutes > 0) parts.push_back(to_string(minutes) + "minute");
+    if (minutes > 0) parts.push_back(to_string(minutes) + " minute");
 
     long long seconds = totalSeconds;
-    if (seconds > 0 || parts.empty()) parts.push_back(to_string(seconds) + "second");
+    if (seconds > 0 || parts.empty()) parts.push_back(to_string(seconds) + " second");
 
-    // 拼接时添加空格（不含首尾空格）
+    // 拼接结果
     stringstream result;
     for (size_t i = 0; i < parts.size(); ++i) {
         if (i > 0) result << " ";

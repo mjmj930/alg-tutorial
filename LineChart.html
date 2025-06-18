@@ -1,0 +1,118 @@
+<div id="chart" style="width: 100%; height: 400px;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script>
+  const chart = echarts.init(document.getElementById('chart'));
+
+  const duration = 60; // 显示60秒
+  let currentTime = 0;
+
+  const uplinkData = [];
+  const downlinkData = [];
+
+  // 记录起始时间戳（单位 ms）
+  const startTimestamp = Date.now();
+
+  const option = {
+    title: {
+      text: '上行 / 下行 动态折线面积图'
+    },
+    tooltip: {
+      trigger: 'axis',
+      formatter: params => {
+        const offsetSec = params[0].value[0];
+        const actualTime = new Date(startTimestamp + offsetSec * 1000);
+        const timeStr = actualTime.toLocaleTimeString();
+        return `${timeStr}<br/>` +
+          params.map(p => `${p.seriesName}: ${p.value[1]}`).join('<br/>');
+      }
+    },
+    legend: {
+      data: ['上行', '下行']
+    },
+    xAxis: {
+      type: 'value',
+      min: 0,
+      max: duration,
+      interval: 10,
+      axisLabel: {
+        formatter: function (value) {
+          const time = new Date(startTimestamp + value * 1000);
+          const h = time.getHours().toString().padStart(2, '0');
+          const m = time.getMinutes().toString().padStart(2, '0');
+          const s = time.getSeconds().toString().padStart(2, '0');
+          return `${h}:${m}:${s}`;
+        }
+      }
+    },
+    yAxis: {
+      type: 'value',
+      min: 0,
+      max: 100
+    },
+    series: [
+      {
+        name: '上行',
+        type: 'line',
+        areaStyle: {
+          color: 'rgba(0, 150, 255, 0.3)'
+        },
+        lineStyle: {
+          color: 'rgba(0, 150, 255, 1)'
+        },
+        showSymbol: false,
+        data: []
+      },
+      {
+        name: '下行',
+        type: 'line',
+        areaStyle: {
+          color: 'rgba(255, 100, 100, 0.3)'
+        },
+        lineStyle: {
+          color: 'rgba(255, 100, 100, 1)'
+        },
+        showSymbol: false,
+        data: []
+      }
+    ],
+    animation: false
+  };
+
+  chart.setOption(option);
+
+  const timer = setInterval(() => {
+    const uplink = Math.floor(Math.random() * 60 + 20);
+    const downlink = Math.floor(Math.random() * 60 + 10);
+
+    uplinkData.push([currentTime, uplink]);
+    downlinkData.push([currentTime, downlink]);
+
+    // 滚动窗口逻辑
+    let xMin = 0;
+    let xMax = duration;
+    if (currentTime > duration) {
+      xMin = currentTime - duration;
+      xMax = currentTime;
+    }
+
+    chart.setOption({
+      xAxis: {
+        min: xMin,
+        max: xMax
+      },
+      series: [
+        {
+          name: '上行',
+          data: uplinkData
+        },
+        {
+          name: '下行',
+          data: downlinkData
+        }
+      ]
+    });
+
+    currentTime += 1;
+  }, 1000);
+</script>

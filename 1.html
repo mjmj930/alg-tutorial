@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络性能监控仪表板</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f1b31, #1d2b3f);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            letter-spacing: 1px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #a0d2eb;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .chart-container {
+            background: rgba(30, 35, 60, 0.8);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 150, 255, 0.2);
+        }
+        
+        .chart-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 100, 255, 0.3);
+        }
+        
+        .chart-title {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #64b5f6;
+            display: flex;
+            align-items: center;
+        }
+        
+        .chart-title i {
+            margin-right: 12px;
+            font-size: 1.5rem;
+        }
+        
+        .chart {
+            height: 450px;
+            width: 100%;
+        }
+        
+        /* 指标卡片容器 */
+        .metrics-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        /* 指标卡片 */
+        .metric-card {
+            background: linear-gradient(135deg, rgba(25, 35, 65, 0.8), rgba(15, 25, 55, 0.9));
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(100, 150, 255, 0.15);
+            transition: all 0.3s ease;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+        }
+        
+        .metric-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .metric-card-title {
+            font-size: 1.8rem;
+            color: #64b5f6;
+            display: flex;
+            align-items: center;
+        }
+        
+        .metric-card-title i {
+            margin-right: 10px;
+            font-size: 1.8rem;
+        }
+        
+        .direction-toggle {
+            display: flex;
+            background: rgba(25, 35, 65, 0.7);
+            border-radius: 50px;
+            padding: 5px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .toggle-btn {
+            padding: 8px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            font-size: 1rem;
+        }
+        
+        .toggle-btn i {
+            margin-right: 5px;
+        }
+        
+        .toggle-btn:hover {
+            background: rgba(100, 181, 246, 0.3);
+            color: #64b5f6;
+        }
+        
+        .toggle-btn.active {
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 114, 255, 0.3);
+        }
+        
+        .metric-content {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        
+        .metric-value-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .metric-value {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #4fc3f7;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .metric-unit {
+            font-size: 1.5rem;
+            color: #90a4ae;
+            margin-left: 10px;
+        }
+        
+        .metric-info {
+            background: rgba(20, 30, 50, 0.5);
+            border-radius: 12px;
+            padding: 15px;
+            flex-grow: 1;
+        }
+        
+        .metric-info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .metric-info-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .info-label {
+            font-size: 1.1rem;
+            color: #90a4ae;
+        }
+        
+        .info-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        .trend-up {
+            color: #66bb6a;
+        }
+        
+        .trend-down {
+            color: #ef5350;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-good {
+            background-color: #66bb6a;
+            box-shadow: 0 0 8px rgba(102, 187, 106, 0.5);
+        }
+        
+        .status-warning {
+            background-color: #ff9800;
+            box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+        }
+        
+        .status-critical {
+            background-color: #ef5350;
+            box-shadow: 0 0 8px rgba(239, 83, 80, 0.5);
+        }
+        
+        .metric-chart {
+            height: 80px;
+            margin-top: 15px;
+        }
+        
+        .metric-description {
+            font-size: 1rem;
+            color: #a0b0c0;
+            margin-top: 15px;
+            line-height: 1.6;
+        }
+        
+        /* 动画 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .metric-card {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+        
+        .metric-card:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+        
+        .metric-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            color: #78909c;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 1100px) {
+            .metrics-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart {
+                height: 350px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .metric-card-title {
+                font-size: 1.5rem;
+            }
+            
+            .metric-value {
+                font-size: 2.8rem;
+            }
+            
+            .metrics-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>网络性能监控仪表板</h1>
+            <p class="subtitle">实时监控上下行吞吐量与RSRP指标，点击卡片切换查看上下行数据</p>
+        </header>
+        
+        <!-- 指标卡片容器 -->
+        <div class="metrics-container">
+            <!-- 吞吐量卡片 -->
+            <div class="metric-card">
+                <div class="metric-card-header">
+                    <div class="metric-card-title">
+                        <i class="fas fa-tachometer-alt"></i> 吞吐量
+                    </div>
+                    <div class="direction-toggle">
+                        <div class="toggle-btn active" data-direction="downlink" data-card="throughput">
+                            <i class="fas fa-arrow-down"></i> 下行
+                        </div>
+                        <div class="toggle-btn" data-direction="uplink" data-card="throughput">
+                            <i class="fas fa-arrow-up"></i> 上行
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="metric-content">
+                    <div class="metric-value-container">
+                        <div>
+                            <div class="metric-value">78.4<span class="metric-unit">Mbps</span></div>
+                            <div class="metric-description">当前网络传输速率</div>
+                        </div>
+                        <div class="info-value trend-up">
+                            <i class="fas fa-arrow-up"></i> 12%
+                        </div>
+                    </div>
+                    
+                    <div class="metric-info">
+                        <div class="metric-info-row">
+                            <div class="info-label">
+                                <span class="status-indicator status-good"></span> 状态
+                            </div>
+                            <div class="info-value">优秀</div>
+                        </div>
+                        <div class="metric-info-row">
+                            <div class="info-label">平均值</div>
+                            <div class="info-value">72.3 Mbps</div>
+                        </div>
+                        <div class="metric-info-row">
+                            <div class="info-label">峰值</div>
+                            <div class="info-value">89.6 Mbps</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-chart" id="throughputMiniChart"></div>
+                </div>
+            </div>
+            
+            <!-- RSRP卡片 -->
+            <div class="metric-card">
+                <div class="metric-card-header">
+                    <div class="metric-card-title">
+                        <i class="fas fa-signal"></i> RSRP
+                    </div>
+                    <div class="direction-toggle">
+                        <div class="toggle-btn active" data-direction="downlink" data-card="rsrp">
+                            <i class="fas fa-arrow-down"></i> 下行
+                        </div>
+                        <div class="toggle-btn" data-direction="uplink" data-card="rsrp">
+                            <i class="fas fa-arrow-up"></i> 上行
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="metric-content">
+                    <div class="metric-value-container">
+                        <div>
+                            <div class="metric-value">-85<span class="metric-unit">dBm</span></div>
+                            <div class="metric-description">当前信号强度</div>
+                        </div>
+                        <div class="info-value trend-down">
+                            <i class="fas fa-arrow-down"></i> 5%
+                        </div>
+                    </div>
+                    
+                    <div class="metric-info">
+                        <div class="metric-info-row">
+                            <div class="info-label">
+                                <span class="status-indicator status-warning"></span> 状态
+                            </div>
+                            <div class="info-value">良好</div>
+                        </div>
+                        <div class="metric-info-row">
+                            <div class="info-label">平均值</div>
+                            <div class="info-value">-88 dBm</div>
+                        </div>
+                        <div class="metric-info-row">
+                            <div class="info-label">最佳值</div>
+                            <div class="info-value">-76 dBm</div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-chart" id="rsrpMiniChart"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dashboard">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-line"></i> 上下行吞吐量趋势 (Mbps)
+                </div>
+                <div id="throughputChart" class="chart"></div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-area"></i> 上下行RSRP信号强度 (dBm)
+                </div>
+                <div id="rsrpChart" class="chart"></div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>数据更新时间: <span id="update-time">2023年11月15日 14:30:45</span> | 监控周期: 每5分钟更新 | 数据来源: 网络基站性能监控系统</p>
+            <p>© 2023 网络性能监控平台 | 技术支持: tech@network-monitor.com</p>
+        </footer>
+    </div>
+
+    <script>
+        // 初始化主图表
+        const throughputChart = echarts.init(document.getElementById('throughputChart'));
+        const rsrpChart = echarts.init(document.getElementById('rsrpChart'));
+        
+        // 初始化小图表
+        const throughputMiniChart = echarts.init(document.getElementById('throughputMiniChart'));
+        const rsrpMiniChart = echarts.init(document.getElementById('rsrpMiniChart'));
+        
+        // 生成时间数据（最近24小时，每5分钟一个点）
+        const now = new Date();
+        const timeData = [];
+        for (let i = 23; i >= 0; i--) {
+            const time = new Date(now);
+            time.setHours(now.getHours() - i);
+            for (let j = 0; j < 12; j++) {
+                const t = new Date(time);
+                t.setMinutes(t.getMinutes() - 5 * j);
+                timeData.push(t.toTimeString().substring(0, 5));
+            }
+        }
+        timeData.reverse();
+        
+        // 生成吞吐量数据
+        function generateThroughputData() {
+            const downlink = [];
+            const uplink = [];
+            
+            for (let i = 0; i < 24 * 12; i++) {
+                // 基础值加随机波动
+                const baseDown = 60 + Math.sin(i / 20) * 30;
+                const baseUp = 25 + Math.sin(i / 15) * 15;
+                
+                downlink.push((baseDown + Math.random() * 15 - 5).toFixed(1));
+                uplink.push((baseUp + Math.random() * 8 - 3).toFixed(1));
+            }
+            
+            return { downlink, uplink };
+        }
+        
+        // 生成RSRP数据
+        function generateRSRPData() {
+            const downlinkRSRP = [];
+            const uplinkRSRP = [];
+            
+            for (let i = 0; i < 24 * 12; i++) {
+                // 基础值加随机波动
+                const baseDown = -85 + Math.sin(i / 25) * 10;
+                const baseUp = -92 + Math.sin(i / 30) * 8;
+                
+                downlinkRSRP.push((baseDown + Math.random() * 4 - 2).toFixed(1));
+                uplinkRSRP.push((baseUp + Math.random() * 3 - 1.5).toFixed(1));
+            }
+            
+            return { downlinkRSRP, uplinkRSRP };
+        }
+        
+        const throughputData = generateThroughputData();
+        const rsrpData = generateRSRPData();
+        
+        // 吞吐量图表配置
+        const throughputOption = {
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(30, 30, 50, 0.9)',
+                borderColor: '#777',
+                textStyle: {
+                    color: '#fff'
+                },
+                axisPointer: {
+                    type: 'cross',
+                    label: {
+                        backgroundColor: '#6a7985'
+                    }
+                }
+            },
+            legend: {
+                data: ['下行吞吐量', '上行吞吐量'],
+                textStyle: {
+                    color: '#90a4ae'
+                },
+                right: 10,
+                top: 10
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: timeData.filter((_, i) => i % 12 === 0), // 每小时显示一个标签
+                axisLine: {
+                    lineStyle: {
+                        color: '#546e7a'
+                    }
+                },
+                axisLabel: {
+                    color: '#90a4ae'
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: 'Mbps',
+                nameTextStyle: {
+                    color: '#90a4ae'
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: '#546e7a'
+                    }
+                },
+                axisLabel: {
+                    color: '#90a4ae',
+                    formatter: '{value} Mbps'
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: 'rgba(84, 110, 122, 0.2)'
+                    }
+                }
+            },
+            series: [
+                {
+                    name: '下行吞吐量',
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    showSymbol: false,
+                    lineStyle: {
+                        width: 3,
+                        color: '#4fc3f7'
+                    },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(79, 195, 247, 0.5)' },
+                            { offset: 1, color: 'rgba(79, 195, 247, 0.1)' }
+                        ])
+                    },
+                    data: throughputData.downlink
+                },
+                {
+                    name: '上行吞吐量',
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    showSymbol: false,
+                    lineStyle: {
+                        width: 3,
+                        color: '#66bb6a'
+                    },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(102, 187, 106, 0.5)' },
+                            { offset: 1, color: 'rgba(102, 187, 106, 0.1)' }
+                        ])
+                    },
+                    data: throughputData.uplink
+                }
+            ],
+            dataZoom: [{
+                type: 'inside',
+                start: 80,
+                end: 100
+            }]
+        };
+        
+        // RSRP图表配置
+        const rsrpOption = {
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(30, 30, 50, 0.9)',
+                borderColor: '#777',
+                textStyle: {
+                    color: '#fff'
+                },
+                axisPointer: {
+                    type: 'cross',
+                    label: {
+                        backgroundColor: '#6a7985'
+                    }
+                }
+            },
+            legend: {
+                data: ['下行RSRP', '上行RSRP'],
+                textStyle: {
+                    color: '#90a4ae'
+                },
+                right: 10,
+                top: 10
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: timeData.filter((_, i) => i % 12 === 0), // 每小时显示一个标签
+                axisLine: {
+                    lineStyle: {
+                        color: '#546e7a'
+                    }
+                },
+                axisLabel: {
+                    color: '#90a4ae'
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: 'dBm',
+                nameTextStyle: {
+                    color: '#90a4ae'
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: '#546e7a'
+                    }
+                },
+                axisLabel: {
+                    color: '#90a4ae',
+                    formatter: '{value} dBm'
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: 'rgba(84, 110, 122, 0.2)'
+                    }
+                }
+            },
+            series: [
+                {
+                    name: '下行RSRP',
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    showSymbol: false,
+                    lineStyle: {
+                        width: 3,
+                        color: '#ff9800'
+                    },
+                    data: rsrpData.downlinkRSRP
+                },
+                {
+                    name: '上行RSRP',
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    showSymbol: false,
+                    lineStyle: {
+                        width: 3,
+                        color: '#ba68c8'
+                    },
+                    data: rsrpData.uplinkRSRP
+                }
+            ],
+            dataZoom: [{
+                type: 'inside',
+                start: 80,
+                end: 100
+            }]
+        };
+        
+        // 小图表配置
+        const throughputMiniOption = {
+            grid: {
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+                containLabel: false
+            },
+            xAxis: {
+                show: false
+            },
+            yAxis: {
+                show: false
+            },
+            series: [
+                {
+                    name: '下行吞吐量',
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'none',
+                    lineStyle: {
+                        width: 2,
+                        color: '#4fc3f7'
+                    },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
+                            { offset: 1, color: 'rgba(79, 195, 247, 0.05)' }
+                        ])
+                    },
+                    data: throughputData.downlink.slice(-12) // 最近一小时数据
+                }
+            ]
+        };
+        
+        const rsrpMiniOption = {
+            grid: {
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+                containLabel: false
+            },
+            xAxis: {
+                show: false
+            },
+            yAxis: {
+                show: false
+            },
+            series: [
+                {
+                    name: '下行RSRP',
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'none',
+                    lineStyle: {
+                        width: 2,
+                        color: '#ff9800'
+                    },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(255, 152, 0, 0.3)' },
+                            { offset: 1, color: 'rgba(255, 152, 0, 0.05)' }
+                        ])
+                    },
+                    data: rsrpData.downlinkRSRP.slice(-12) // 最近一小时数据
+                }
+            ]
+        };
+        
+        // 应用配置
+        throughputChart.setOption(throughputOption);
+        rsrpChart.setOption(rsrpOption);
+        throughputMiniChart.setOption(throughputMiniOption);
+        rsrpMiniChart.setOption(rsrpMiniOption);
+        
+        // 响应窗口调整大小
+        window.addEventListener('resize', function() {
+            throughputChart.resize();
+            rsrpChart.resize();
+            throughputMiniChart.resize();
+            rsrpMiniChart.resize();
+        });
+        
+        // 切换按钮功能
+        const toggleButtons = document.querySelectorAll('.toggle-btn');
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const cardType = this.getAttribute('data-card');
+                const direction = this.getAttribute('data-direction');
+                const parent = this.closest('.direction-toggle');
+                
+                // 更新按钮状态
+                parent.querySelectorAll('.toggle-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                // 更新卡片内容
+                if (cardType === 'throughput') {
+                    if (direction === 'downlink') {
+                        document.querySelector('.metric-card:first-child .metric-value').innerHTML = '78.4<span class="metric-unit">Mbps</span>';
+                        document.querySelector('.metric-card:first-child .info-value').innerHTML = '<i class="fas fa-arrow-up"></i> 12%';
+                        document.querySelector('.metric-card:first-child .metric-description').textContent = '当前网络下行传输速率';
+                        document.querySelector('.metric-card:first-child .metric-info .info-value:first-child').textContent = '优秀';
+                        document.querySelector('.metric-card:first-child .metric-info-row:first-child .status-indicator').className = 'status-indicator status-good';
+                        
+                        // 更新小图表
+                        throughputMiniChart.setOption({
+                            series: [{
+                                name: '下行吞吐量',
+                                data: throughputData.downlink.slice(-12),
+                                lineStyle: { color: '#4fc3f7' },
+                                areaStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
+                                        { offset: 1, color: 'rgba(79, 195, 247, 0.05)' }
+                                    ])
+                                }
+                            }]
+                        });
+                    } else {
+                        document.querySelector('.metric-card:first-child .metric-value').innerHTML = '32.1<span class="metric-unit">Mbps</span>';
+                        document.querySelector('.metric-card:first-child .info-value').innerHTML = '<i class="fas fa-arrow-down"></i> 5%';
+                        document.querySelector('.metric-card:first-child .metric-description').textContent = '当前网络上行传输速率';
+                        document.querySelector('.metric-card:first-child .metric-info .info-value:first-child').textContent = '良好';
+                        document.querySelector('.metric-card:first-child .metric-info-row:first-child .status-indicator').className = 'status-indicator status-warning';
+                        
+                        // 更新小图表
+                        throughputMiniChart.setOption({
+                            series: [{
+                                name: '上行吞吐量',
+                                data: throughputData.uplink.slice(-12),
+                                lineStyle: { color: '#66bb6a' },
+                                areaStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: 'rgba(102, 187, 106, 0.3)' },
+                                        { offset: 1, color: 'rgba(102, 187, 106, 0.05)' }
+                                    ])
+                                }
+                            }]
+                        });
+                    }
+                } else if (cardType === 'rsrp') {
+                    if (direction === 'downlink') {
+                        document.querySelector('.metric-card:last-child .metric-value').innerHTML = '-85<span class="metric-unit">dBm</span>';
+                        document.querySelector('.metric-card:last-child .info-value').innerHTML = '<i class="fas fa-arrow-down"></i> 5%';
+                        document.querySelector('.metric-card:last-child .metric-description').textContent = '当前下行信号强度';
+                        document.querySelector('.metric-card:last-child .metric-info .info-value:first-child').textContent = '良好';
+                        document.querySelector('.metric-card:last-child .metric-info-row:first-child .status-indicator').className = 'status-indicator status-warning';
+                        
+                        // 更新小图表
+                        rsrpMiniChart.setOption({
+                            series: [{
+                                name: '下行RSRP',
+                                data: rsrpData.downlinkRSRP.slice(-12),
+                                lineStyle: { color: '#ff9800' },
+                                areaStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: 'rgba(255, 152, 0, 0.3)' },
+                                        { offset: 1, color: 'rgba(255, 152, 0, 0.05)' }
+                                    ])
+                                }
+                            }]
+                        });
+                    } else {
+                        document.querySelector('.metric-card:last-child .metric-value').innerHTML = '-92<span class="metric-unit">dBm</span>';
+                        document.querySelector('.metric-card:last-child .info-value').innerHTML = '<i class="fas fa-arrow-down"></i> 7%';
+                        document.querySelector('.metric-card:last-child .metric-description').textContent = '当前上行信号强度';
+                        document.querySelector('.metric-card:last-child .metric-info .info-value:first-child').textContent = '一般';
+                        document.querySelector('.metric-card:last-child .metric-info-row:first-child .status-indicator').className = 'status-indicator status-critical';
+                        
+                        // 更新小图表
+                        rsrpMiniChart.setOption({
+                            series: [{
+                                name: '上行RSRP',
+                                data: rsrpData.uplinkRSRP.slice(-12),
+                                lineStyle: { color: '#ba68c8' },
+                                areaStyle: {
+                                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                        { offset: 0, color: 'rgba(186, 104, 200, 0.3)' },
+                                        { offset: 1, color: 'rgba(186, 104, 200, 0.05)' }
+                                    ])
+                                }
+                            }]
+                        });
+                    }
+                }
+            });
+        });
+        
+        // 更新时间
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            };
+            document.getElementById('update-time').textContent = now.toLocaleDateString('zh-CN', options);
+        }
+        
+        // 初始更新时间
+        updateDateTime();
+        
+        // 每分钟更新一次时间
+        setInterval(updateDateTime, 60000);
+    </script>
+</body>
+</html>
